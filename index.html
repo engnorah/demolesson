@@ -673,14 +673,46 @@
     else{ document.exitFullscreen(); }
   });
 
-  // ---------- SLIDE 2: POLL ----------
+  // ---------- SLIDE 2: POLL (shared, live count via Abacus — no backend needed) ----------
+  const COUNTER_NAMESPACE = 'norah-alrashidi-demolesson';
+  const COUNTER_KEY = 'slide2-raised-hand';
   const pollBtn = document.getElementById('poll-btn');
   const pollCount = document.getElementById('poll-count');
-  let pollN = 0;
-  pollBtn.addEventListener('click', ()=>{
-    pollN++;
-    pollCount.textContent = pollN + (pollN===1 ? ' response' : ' responses');
+
+  function formatResponses(n){
+    return n + (n === 1 ? ' response' : ' responses');
+  }
+
+  async function refreshPollCount(){
+    try {
+      const res = await fetch(`https://abacus.jasoncameron.dev/get/${COUNTER_NAMESPACE}/${COUNTER_KEY}`);
+      const data = await res.json();
+      pollCount.textContent = formatResponses(data.value || 0);
+    } catch (err) {
+      // Silent fail — keep whatever was last shown, don't break the slide.
+    }
+  }
+
+  pollBtn.addEventListener('click', async () => {
+    pollBtn.disabled = true;
+    try {
+      const res = await fetch(`https://abacus.jasoncameron.dev/hit/${COUNTER_NAMESPACE}/${COUNTER_KEY}`);
+      const data = await res.json();
+      pollCount.textContent = formatResponses(data.value || 0);
+    } catch (err) {
+      pollCount.textContent = 'Could not reach counter — try again';
+    } finally {
+      pollBtn.disabled = false;
+    }
   });
+
+  // Load the current count on page load, then keep it live while slide 2 is open
+  refreshPollCount();
+  setInterval(() => {
+    if (document.querySelector('.s-manifesto.active')) {
+      refreshPollCount();
+    }
+  }, 4000);
 
   // ---------- SLIDE 5: CLICK ANYWHERE TO REVEAL ----------
   const slide5 = document.getElementById('slide5');
