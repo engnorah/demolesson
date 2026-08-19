@@ -1,0 +1,714 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Phishing &amp; Social Engineering — Demo Lesson</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans+Arabic:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --paper:      #E9E5DB;
+    --paper-deep: #DCD6C4;
+    --sun:        #F1EE2E;
+    --sun-soft:   #F8F39B;
+    --ink:        #1B2566;
+    --ember:      #E26B4A;
+    --haze:       #F0DA7C;
+    --line:       #1B2566;
+    --teal:       #1E8A72;
+    --danger:     #C0392B;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #0a0a0a; }
+  body {
+    font-family: 'Archivo', 'Helvetica Neue', sans-serif;
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  .deck { position: fixed; inset: 0; display: grid; place-items: center; }
+  .stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: var(--paper); }
+
+  .slide {
+    position: absolute; inset: 0;
+    opacity: 0; pointer-events: none;
+    transform: scale(1.012);
+    transition: opacity 420ms ease, transform 420ms ease;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; transform: scale(1); }
+
+  .display      { font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; line-height: 0.9; letter-spacing: -0.012em; }
+  .display-it   { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; line-height: 1.04; letter-spacing: -0.005em; }
+  .micro-label  { font-family: 'Archivo', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; }
+  .body-text    { font-family: 'Archivo', sans-serif; font-weight: 400; line-height: 1.5; }
+  .mono-tab     { font-family: 'JetBrains Mono', ui-monospace, monospace; font-weight: 400; }
+  .ar           { font-family: 'IBM Plex Sans Arabic', sans-serif; direction: rtl; }
+
+  .pagenum {
+    position: absolute; right: clamp(24px, 2.4vw, 48px); bottom: clamp(22px, 2.4vh, 42px);
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: clamp(11px, 0.85vw, 13px);
+    color: var(--ink); letter-spacing: 0.08em; z-index: 8; opacity: 0.75;
+  }
+
+  svg.icon { stroke: var(--ink); fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ============================================================
+     HUD — persistent, low-key, editorial-consistent
+     ============================================================ */
+  #hud-tl {
+    position: fixed; left: clamp(20px, 2vw, 36px); top: clamp(20px, 2vh, 34px); z-index: 90;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    display: flex; gap: 8px; align-items: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+  }
+  #hud-tl.show, #hud-tr.show, #hud-bl.show { opacity: 1; pointer-events: auto; }
+  .hud-chip {
+    border: 1px solid var(--ink); background: rgba(233,229,219,0.55); backdrop-filter: blur(2px);
+    padding: 5px 11px; border-radius: 2px; color: var(--ink);
+  }
+  .hud-chip.lang-en{ background: rgba(30,138,114,0.16); }
+  .hud-chip.lang-ar{ background: rgba(241,238,46,0.35); }
+  .hud-chip.lang-mixed{ background: linear-gradient(90deg, rgba(30,138,114,0.16), rgba(241,238,46,0.35)); }
+
+  #hud-tr {
+    position: fixed; right: clamp(20px, 2vw, 36px); top: clamp(20px, 2vh, 34px); z-index: 90;
+    display: flex; gap: 8px; align-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.06em;
+    opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+  }
+  #hud-timer { font-weight: 600; transition: color 0.3s; }
+  #hud-timer.behind { color: var(--danger); }
+  .hud-btn {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+    border: 1px solid var(--ink); background: transparent; color: var(--ink);
+    padding: 5px 10px; border-radius: 2px; cursor: pointer; transition: all 0.15s;
+  }
+  .hud-btn:hover { background: var(--ink); color: var(--paper); }
+
+  #hud-bl { position: fixed; left: clamp(20px, 2vw, 36px); bottom: clamp(16px, 2vh, 28px); z-index: 90; display: flex; gap: 8px; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+  #hud-dots { position: fixed; left: 50%; bottom: clamp(16px, 2vh, 28px); transform: translateX(-50%); z-index: 90; display: flex; gap: 7px; }
+  .hud-dot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid var(--ink); background: transparent; cursor: pointer; padding: 0; }
+  .hud-dot.active { background: var(--ink); width: 18px; border-radius: 4px; }
+
+  #hud-notes {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 95;
+    background: rgba(233,229,219,0.98); border-top: 2px solid var(--ink);
+    padding: 26px clamp(40px,5vw,90px); max-height: 32%; overflow-y: auto;
+    transform: translateY(100%); transition: transform 0.32s ease;
+    font-family: 'Archivo', sans-serif; font-size: 16px; line-height: 1.65; color: var(--ink);
+  }
+  #hud-notes.open { transform: translateY(0); }
+  #hud-notes .nh {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    display: flex; justify-content: space-between; margin-bottom: 10px; opacity: 0.7;
+  }
+  #hud-notes .nb { white-space: pre-line; }
+
+  /* ============================================================
+     SLIDE 1 — COVER
+     ============================================================ */
+  .s-cover { background: var(--paper); }
+  .s-cover .blocks { position: absolute; inset: 0; pointer-events: none; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; grid-template-rows: repeat(8, 1fr); }
+  .s-cover .blocks .b1 { background: rgba(241,238,46,0.55); grid-column: 1; grid-row: 3 / 6; }
+  .s-cover .blocks .b2 { background: rgba(241,238,46,0.4);  grid-column: 4; grid-row: 1 / 4; }
+  .s-cover .blocks .b3 { background: rgba(241,238,46,0.7);  grid-column: 1 / 3; grid-row: 6 / 9; }
+  .s-cover .blocks .b4 { background: rgba(241,238,46,0.45); grid-column: 3 / 5; grid-row: 6 / 8; }
+  .s-cover .sunglow {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 42% 38% at 52% 42%, rgba(241,238,46,0.95) 0%, rgba(241,238,46,0.65) 38%, rgba(240,218,124,0.22) 65%, rgba(233,229,219,0) 88%),
+      radial-gradient(ellipse 28% 30% at 88% 16%, rgba(226,107,74,0.22) 0%, rgba(226,107,74,0) 70%);
+  }
+  .s-cover .shield-mark { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-52%); width: clamp(140px,14vw,240px); height: clamp(140px,14vw,240px); opacity: 0.85; z-index: 3; }
+  .s-cover .date-rail {
+    position: absolute; top: clamp(28px, 3.2vh, 56px); right: clamp(40px, 4vw, 76px);
+    font-family: 'JetBrains Mono', monospace; font-size: clamp(13px, 1vw, 16px);
+    color: var(--ink); text-align: right; letter-spacing: 0.06em; z-index: 5;
+  }
+  .s-cover .titlewrap { position: absolute; left: clamp(40px, 4vw, 76px); bottom: clamp(132px, 16vh, 220px); z-index: 5; max-width: 88%; }
+  .s-cover .title { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(90px, min(11vw, 17vh), 190px); line-height: 0.88; color: var(--ink); letter-spacing: -0.018em; }
+  .s-cover .title .em { font-style: italic; color: var(--ember); }
+  .s-cover .ar-title { margin-top: 14px; font-family: 'IBM Plex Sans Arabic', sans-serif; font-weight: 700; font-size: clamp(30px,3vw,44px); color: var(--ink); direction: rtl; }
+  .s-cover .subline { margin-top: clamp(10px,1.2vh,18px); font-family: 'Archivo', sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px, 0.85vw, 13px); color: var(--ink); }
+  .s-cover .footer-row {
+    position: absolute; left: clamp(40px, 4vw, 76px); right: clamp(40px, 4vw, 76px); bottom: clamp(28px, 3vh, 52px);
+    display: grid; grid-template-columns: 1.1fr 1fr 1.4fr 2fr; gap: clamp(20px, 2.4vw, 44px); z-index: 5;
+  }
+  .s-cover .footer-row > div { border-top: 1px solid var(--ink); padding-top: clamp(10px, 1.2vh, 16px); }
+  .s-cover .footer-row .ftag { text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; font-size: clamp(10px, 0.72vw, 12px); margin-bottom: 6px; }
+  .s-cover .footer-row .ftxt { font-family: 'Archivo', sans-serif; font-size: clamp(11px, 0.78vw, 13px); line-height: 1.45; }
+  .s-cover .footer-row .fdesc { font-family: 'Archivo', sans-serif; font-size: clamp(11px, 0.74vw, 12px); line-height: 1.5; color: var(--ink); }
+
+  /* ============================================================
+     SLIDE 2 — MANIFESTO / HOOK
+     ============================================================ */
+  .s-manifesto { background: var(--paper); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .s-manifesto .haze {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 70% 60% at 50% 42%, rgba(241,238,46,0.7) 0%, rgba(248,243,155,0.42) 32%, rgba(240,218,124,0.18) 56%, rgba(233,229,219,0) 80%),
+      radial-gradient(circle 600px at 12% 88%, rgba(226,107,74,0.15) 0%, rgba(226,107,74,0) 70%);
+  }
+  .s-manifesto .kicker { position: absolute; top: clamp(40px,5vh,72px); left: 50%; transform: translateX(-50%); z-index: 4; font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; font-size: clamp(11px,0.85vw,13px); }
+  .s-manifesto .quote {
+    position: relative; z-index: 4; max-width: min(84%, 1400px); padding: 0 clamp(40px, 6vw, 120px);
+    font-family: 'Instrument Serif', Georgia, serif; font-weight: 400;
+    font-size: clamp(46px, min(6vw, 9.5vh), 100px); line-height: 1.06; color: var(--ink);
+    letter-spacing: -0.005em; text-align: center;
+  }
+  .s-manifesto .sub-note {
+    position: relative; z-index: 4; text-align: center; margin-top: clamp(18px,2.4vh,34px);
+    font-family: 'Archivo'; font-size: clamp(14px,1vw,17px); color: var(--ink); opacity: 0.8; max-width: 640px;
+  }
+  .s-manifesto .poll-zone { position: relative; z-index: 5; margin-top: clamp(26px,3.2vh,46px); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #poll-btn {
+    font-family: 'Archivo'; font-weight: 700; font-size: clamp(14px,1vw,17px);
+    background: var(--ink); color: var(--paper); border: none; padding: 16px 34px; border-radius: 999px;
+    cursor: pointer; letter-spacing: 0.02em; transition: transform 0.15s, background 0.15s;
+  }
+  #poll-btn:hover { transform: translateY(-2px); background: var(--ember); }
+  #poll-count { font-family: 'JetBrains Mono'; font-size: 13px; color: var(--ink); opacity: 0.75; }
+  .s-manifesto .attr { position: absolute; left: clamp(40px, 4vw, 76px); bottom: clamp(56px, 6vh, 96px); font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2em; font-size: clamp(11px, 0.85vw, 13px); color: var(--ink); z-index: 4; }
+
+  /* ============================================================
+     SLIDE 3 — PROGRAMME (types of phishing)
+     ============================================================ */
+  .s-programme { background: var(--paper); display: grid; grid-template-columns: 1fr 1fr; }
+  .s-programme .left { background: var(--sun); position: relative; padding: clamp(40px, 4.2vw, 80px); display: flex; flex-direction: column; justify-content: space-between; }
+  .s-programme .left .kicker { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2em; font-size: clamp(11px, 0.85vw, 14px); }
+  .s-programme .left .word { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(90px, min(9.5vw, 15vh), 170px); line-height: 0.86; color: var(--ink); letter-spacing: -0.018em; }
+  .s-programme .left .icon-row { display: flex; gap: 18px; margin: 8px 0; }
+  .s-programme .left .icon-row svg { width: clamp(36px,3.4vw,52px); height: clamp(36px,3.4vw,52px); }
+  .s-programme .left .meta { font-family: 'Archivo'; font-size: clamp(13px, 0.95vw, 16px); line-height: 1.5; max-width: 90%; color: var(--ink); }
+  .s-programme .right { background: var(--paper); position: relative; padding: clamp(40px, 4.2vw, 80px) clamp(40px, 4.2vw, 80px) clamp(56px, 5vh, 88px); display: flex; flex-direction: column; gap: clamp(14px, 1.8vh, 24px); }
+  .s-programme .right .head { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px, 0.85vw, 14px); border-bottom: 1px solid var(--ink); padding-bottom: 14px; }
+  .s-programme .strands { display: flex; flex-direction: column; gap: clamp(12px, 1.6vh, 20px); }
+  .s-programme .strand { display: grid; grid-template-columns: 56px 1fr; gap: clamp(14px, 1.4vw, 24px); border-bottom: 1px solid rgba(27,37,102,0.18); padding-bottom: clamp(10px, 1.4vh, 18px); }
+  .s-programme .strand .num { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(24px, 1.8vw, 34px); color: var(--ink); line-height: 1; }
+  .s-programme .strand h3 { margin: 0 0 4px 0; font-family: 'Instrument Serif', Georgia, serif; font-weight: 400; font-size: clamp(20px, 1.5vw, 28px); line-height: 1.1; color: var(--ink); }
+  .s-programme .strand p { margin: 0; font-family: 'Archivo'; font-size: clamp(13px, 0.9vw, 14.5px); line-height: 1.5; color: var(--ink); max-width: 94%; }
+
+  /* ============================================================
+     SLIDE 4 — CHAPTER DIVIDER (social engineering, arabic)
+     ============================================================ */
+  .s-chapter { background: var(--paper); }
+  .s-chapter .glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle 720px at 106% -10%, rgba(241,238,46,0.7) 0%, rgba(241,238,46,0) 65%), radial-gradient(circle 540px at -8% 108%, rgba(226,107,74,0.18) 0%, rgba(226,107,74,0) 70%); }
+  .s-chapter .frame { position: absolute; inset: clamp(40px, 4vw, 76px) clamp(40px, 4vw, 76px) clamp(70px, 7vh, 120px); display: flex; flex-direction: column; z-index: 4; direction: rtl; }
+  .s-chapter .head { display: flex; align-items: end; justify-content: space-between; border-bottom: 1px solid var(--ink); padding-bottom: clamp(12px, 1.4vh, 22px); margin-bottom: clamp(20px, 2.4vh, 34px); }
+  .s-chapter .head .h { font-family: 'IBM Plex Sans Arabic', sans-serif; font-weight: 700; font-size: clamp(34px, min(4vw, 6.4vh), 62px); line-height: 1.2; color: var(--ink); }
+  .s-chapter .head .lab { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px, 0.8vw, 13px); direction: ltr; }
+  .s-chapter .lede { font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: clamp(15px, 1.15vw, 19px); line-height: 1.75; color: var(--ink); max-width: 900px; text-align: right; }
+  .s-chapter .techs { margin-top: clamp(20px, 2.6vh, 36px); display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 780px; }
+  .s-chapter .tech-row { display: flex; align-items: center; justify-content: flex-end; gap: 12px; font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: clamp(15px,1.05vw,18px); border-bottom: 1px solid rgba(27,37,102,0.15); padding-bottom: 12px; }
+  .s-chapter .tech-row .sw { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .s-chapter .prompt { margin-top: clamp(22px,2.8vh,38px); font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: clamp(14px,1vw,16px); color: var(--teal); font-weight: 600; text-align: right; }
+
+  /* ============================================================
+     SLIDE 5 — RED FLAGS (custom, data-family)
+     ============================================================ */
+  .s-flags { background: var(--paper); }
+  .s-flags .glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 50% 40% at 92% 8%, rgba(241,238,46,0.55) 0%, rgba(241,238,46,0) 70%); }
+  .s-flags .frame { position: absolute; inset: clamp(40px, 4vw, 76px) clamp(40px, 4vw, 76px) clamp(70px, 7vh, 120px); display: flex; flex-direction: column; gap: clamp(18px,2vh,28px); z-index: 4; }
+  .s-flags .head { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; border-bottom: 1px solid var(--ink); padding-bottom: clamp(14px, 1.6vh, 22px); }
+  .s-flags .head .h { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(38px, min(4vw, 6.6vh), 66px); line-height: 1; color: var(--ink); }
+  .s-flags .head .h .ar { display: block; font-family: 'IBM Plex Sans Arabic'; font-size: 0.46em; font-weight: 700; margin-top: 6px; color: var(--ember); }
+  .s-flags .head .lab { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px,0.8vw,13px); }
+  .s-flags .body { flex: 1; display: flex; gap: clamp(28px,3vw,52px); }
+  .s-flags .email-card {
+    width: 52%; background: #fff; border: 1.5px solid var(--ink); box-shadow: 10px 10px 0 rgba(27,37,102,0.14);
+    padding: clamp(26px,2.6vw,40px); font-family: 'Archivo'; color: #1a1a1a; height: fit-content; align-self: center;
+  }
+  .s-flags .email-card .f { font-size: clamp(13px,0.95vw,16px); margin-bottom: 12px; line-height: 1.45; }
+  .s-flags .email-card .f.danger { color: var(--danger); font-weight: 700; font-family: 'JetBrains Mono'; font-size: clamp(12px,0.85vw,14px); }
+  .s-flags .email-card .btnbox { background: #2F4FBF; color: #fff; text-align: center; padding: 14px; font-weight: 700; font-size: clamp(13px,0.9vw,15px); margin: 16px 0; border-radius: 4px; }
+  .s-flags .email-card .fine { font-size: 11px; color: #888; font-style: italic; margin-top: 10px; }
+  .s-flags .flags-panel { flex: 1; display: flex; flex-direction: column; gap: 14px; justify-content: center; }
+  .s-flags .flag {
+    border: 1px solid var(--ink); background: rgba(255,255,255,0.5); padding: 16px 20px;
+    font-family: 'Archivo'; font-size: clamp(14px,1vw,17px); line-height: 1.4;
+    opacity: 0; transform: translateX(18px); transition: opacity .5s ease, transform .5s ease, background .3s;
+  }
+  .s-flags .flag b { font-family: 'JetBrains Mono'; font-weight: 700; display: block; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; color: var(--ember); }
+  .s-flags .flags-panel.revealed .flag { opacity: 1; transform: translateX(0); }
+  .s-flags .flags-panel.revealed .flag:nth-child(1){ transition-delay: 0s;   background: var(--sun-soft); }
+  .s-flags .flags-panel.revealed .flag:nth-child(2){ transition-delay: .2s; background: rgba(226,107,74,0.16); }
+  .s-flags .flags-panel.revealed .flag:nth-child(3){ transition-delay: .4s; background: var(--sun-soft); }
+  .s-flags .flags-panel.revealed .flag:nth-child(4){ transition-delay: .6s; background: rgba(226,107,74,0.16); }
+  .s-flags .hint { font-family: 'JetBrains Mono'; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink); opacity: 0.55; transition: opacity .4s ease; }
+  .s-flags .hint.hidden { opacity: 0; }
+
+  /* ============================================================
+     SLIDE 6 — GCC EXAMPLES (calendar/ledger family, arabic)
+     ============================================================ */
+  .s-ledger { background: var(--paper); }
+  .s-ledger .glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 50% 40% at 8% 92%, rgba(241,238,46,0.5) 0%, rgba(241,238,46,0) 70%); }
+  .s-ledger .frame { position: absolute; inset: clamp(40px, 4vw, 76px) clamp(40px, 4vw, 76px) clamp(70px, 7vh, 120px); display: flex; flex-direction: column; z-index: 4; direction: rtl; }
+  .s-ledger .topbar { display: flex; align-items: end; justify-content: space-between; border-bottom: 1px solid var(--ink); padding-bottom: clamp(12px, 1.4vh, 22px); margin-bottom: clamp(20px, 2.2vh, 30px); }
+  .s-ledger .topbar .h { font-family: 'IBM Plex Sans Arabic'; font-weight: 700; font-size: clamp(34px, min(4vw, 6.4vh), 62px); line-height: 1.15; color: var(--ink); }
+  .s-ledger .topbar .lab { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px, 0.8vw, 13px); direction: ltr; }
+  .s-ledger .rows { flex: 1; display: flex; flex-direction: column; gap: 0; justify-content: center; }
+  .s-ledger .row { display: grid; grid-template-columns: 1fr 1.6fr; gap: clamp(18px,2vw,36px); align-items: center; padding: clamp(20px,2.4vh,32px) 0; border-bottom: 1px solid rgba(27,37,102,0.2); }
+  .s-ledger .row .ttl { font-family: 'IBM Plex Sans Arabic'; font-weight: 700; font-size: clamp(20px, 1.6vw, 30px); line-height: 1.2; color: var(--ink); text-align: right; }
+  .s-ledger .row .desc { font-family: 'IBM Plex Sans Arabic'; font-size: clamp(14px, 1vw, 17px); color: var(--ink); opacity: 0.85; line-height: 1.5; text-align: right; }
+  .s-ledger .prompt { margin-top: clamp(18px,2vh,26px); font-family: 'IBM Plex Sans Arabic'; font-weight: 600; font-size: clamp(14px,1vw,16px); color: var(--teal); text-align: right; }
+
+  /* ============================================================
+     SLIDE 7 — PROTECT YOURSELF (checklist, data-family)
+     ============================================================ */
+  .s-check { background: var(--paper); }
+  .s-check .glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 46% 40% at 90% 90%, rgba(241,238,46,0.5) 0%, rgba(241,238,46,0) 70%); }
+  .s-check .frame { position: absolute; inset: clamp(40px, 4vw, 76px) clamp(40px, 4vw, 76px) clamp(70px, 7vh, 120px); display: flex; flex-direction: column; z-index: 4; }
+  .s-check .head { display: flex; align-items: end; justify-content: space-between; border-bottom: 1px solid var(--ink); padding-bottom: clamp(14px, 1.6vh, 22px); margin-bottom: clamp(18px,2vh,28px); }
+  .s-check .head .h { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(40px, min(4.4vw, 7vh), 78px); line-height: 1; color: var(--ink); }
+  .s-check .head .lab { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px,0.8vw,13px); }
+  .s-check .rows { flex: 1; display: flex; flex-direction: column; gap: clamp(8px,1.2vh,14px); justify-content: center; }
+  .s-check .row { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: clamp(16px,1.6vw,28px); border-bottom: 1px solid rgba(27,37,102,0.2); padding-bottom: clamp(10px,1.4vh,18px); }
+  .s-check .row .n { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(30px,2.2vw,42px); color: var(--ember); line-height: 1; }
+  .s-check .row .t { font-family: 'Archivo'; font-size: clamp(15px,1.1vw,18px); line-height: 1.45; color: var(--ink); }
+
+  /* ============================================================
+     SLIDE 8 — QUIZ (custom, split-family)
+     ============================================================ */
+  .s-quiz { background: var(--paper); }
+  .s-quiz .glow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 50% 44% at 12% 10%, rgba(241,238,46,0.55) 0%, rgba(241,238,46,0) 70%); }
+  .s-quiz .frame { position: absolute; inset: clamp(40px, 4vw, 76px) clamp(40px, 4vw, 76px) clamp(56px, 6vh, 100px); display: flex; flex-direction: column; z-index: 4; }
+  .s-quiz .head { display: flex; align-items: end; justify-content: space-between; border-bottom: 1px solid var(--ink); padding-bottom: clamp(12px, 1.4vh, 20px); margin-bottom: clamp(16px,1.8vh,24px); }
+  .s-quiz .head .h { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(38px, min(4vw, 6.6vh), 68px); line-height: 1; color: var(--ink); }
+  .s-quiz .head .lab { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: clamp(11px,0.8vw,13px); }
+  .s-quiz .items { flex: 1; display: flex; flex-direction: column; gap: clamp(10px,1.4vh,16px); justify-content: center; }
+  .s-quiz .qitem { border: 1px solid var(--ink); background: rgba(255,255,255,0.45); padding: clamp(14px,1.6vh,20px) clamp(20px,2vw,30px); }
+  .s-quiz .qtext { font-family: 'Archivo'; font-size: clamp(15px,1.05vw,17px); margin-bottom: 12px; color: var(--ink); }
+  .s-quiz .qbtns { display: flex; gap: 12px; }
+  .s-quiz .qbtn {
+    font-family: 'JetBrains Mono'; font-weight: 500; font-size: clamp(11px,0.8vw,13px); letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 9px 18px; border: 1px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; transition: all 0.15s;
+  }
+  .s-quiz .qbtn:hover { background: var(--ink); color: var(--paper); }
+  .s-quiz .qbtn.correct { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .s-quiz .qbtn.incorrect { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .s-quiz .qfeedback { font-family: 'Archivo'; font-size: clamp(12.5px,0.9vw,14.5px); color: var(--ink); opacity: 0.75; margin-top: 10px; display: none; }
+  .s-quiz .qfeedback.show { display: block; }
+
+  /* ============================================================
+     SLIDE 9 — COLOPHON / CLOSING
+     ============================================================ */
+  .s-colophon { background: var(--paper); }
+  .s-colophon .glow {
+    position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 55% 50% at 50% 110%, rgba(241,238,46,0.85) 0%, rgba(241,238,46,0.5) 35%, rgba(240,218,124,0.18) 60%, rgba(233,229,219,0) 84%),
+      radial-gradient(ellipse 30% 30% at 12% 18%, rgba(226,107,74,0.18) 0%, rgba(226,107,74,0) 70%);
+  }
+  .s-colophon .blocks { position: absolute; inset: 0; pointer-events: none; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; grid-template-rows: repeat(8, 1fr); }
+  .s-colophon .blocks .b1 { background: rgba(241,238,46,0.55); grid-column: 1 / 3; grid-row: 1 / 3; }
+  .s-colophon .blocks .b2 { background: rgba(241,238,46,0.4);  grid-column: 4; grid-row: 5 / 8; }
+  .s-colophon .titlewrap { position: absolute; left: clamp(40px, 4vw, 76px); top: clamp(36px, 4vh, 72px); z-index: 5; max-width: 92%; }
+  .s-colophon .ktag { font-family: 'Archivo'; font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; font-size: clamp(11px, 0.82vw, 13px); color: var(--ink); margin-bottom: clamp(12px, 1.4vh, 22px); }
+  .s-colophon .ttl { font-family: 'Instrument Serif', Georgia, serif; font-size: clamp(80px, min(10vw, 16vh), 190px); line-height: 0.86; color: var(--ink); letter-spacing: -0.018em; }
+  .s-colophon .ttl .ar { display: block; font-family: 'IBM Plex Sans Arabic'; font-weight: 700; font-size: 0.34em; color: var(--ember); margin-top: 14px; }
+  .s-colophon .colofo { position: absolute; left: clamp(40px, 4vw, 76px); bottom: clamp(70px, 8vh, 120px); right: clamp(40px, 4vw, 76px); display: grid; grid-template-columns: 1.2fr 1.3fr 1fr 1.3fr; gap: clamp(20px, 2.4vw, 44px); z-index: 5; }
+  .s-colophon .colofo > div { border-top: 1px solid var(--ink); padding-top: clamp(10px, 1.2vh, 16px); }
+  .s-colophon .colofo .ftag { text-transform: uppercase; letter-spacing: 0.16em; font-weight: 600; font-size: clamp(10px, 0.72vw, 12px); margin-bottom: 6px; color: var(--ink); }
+  .s-colophon .colofo .ftxt { font-family: 'Archivo'; font-size: clamp(11px, 0.78vw, 13px); line-height: 1.5; color: var(--ink); }
+
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <div class="stage">
+
+    <!-- 1. COVER -->
+    <section class="slide s-cover active" data-lang="en" data-target="1"
+      data-notes="Don't rush the intro. Smile, breathe, introduce myself normally — MSc in cybersecurity, 6+ years teaching. Mention up front that I'll move between English and Arabic, and that I want them talking too, not just listening. Confident beats perfect here.">
+      <div class="blocks" aria-hidden="true"><div class="b1"></div><div class="b2"></div><div class="b3"></div><div class="b4"></div></div>
+      <div class="sunglow" aria-hidden="true"></div>
+      <svg class="icon shield-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 L20 5.5 V11.5 C20 16.8 16.4 20.6 12 22 C7.6 20.6 4 16.8 4 11.5 V5.5 Z"/><path d="M8.5 12 L11 14.5 L16 9"/></svg>
+
+      <div class="date-rail">KAPLAN MENA<br/>DEMO LESSON</div>
+
+      <div class="titlewrap">
+        <h1 class="title">Phishing &amp;<br/><span class="em">Social Eng.</span></h1>
+        <div class="ar-title">التصيد الاحتيالي والهندسة الاجتماعية</div>
+        <div class="subline">Your First Line of Defense</div>
+      </div>
+
+      <div class="footer-row">
+        <div><div class="ftag">Presented by</div><div class="ftxt">Norah H. Alrashidi<br/>Cybersecurity Instructor Candidate</div></div>
+        <div><div class="ftag">Format</div><div class="ftxt">30 minutes<br/>Bilingual, EN / AR</div></div>
+        <div><div class="ftag">Audience</div><div class="ftxt">Mixed technical &amp; non-technical<br/>Government &amp; financial sector</div></div>
+        <div><div class="ftag">Session</div><div class="fdesc">A practical, interactive walkthrough of phishing and social engineering — how to recognize it, and how to build a culture that catches it.</div></div>
+      </div>
+
+      <div class="pagenum">01 / 09</div>
+    </section>
+
+    <!-- 2. MANIFESTO / HOOK -->
+    <section class="slide s-manifesto" data-lang="en" data-target="4"
+      data-notes="Ask the question, then actually wait. Silence feels long but it isn't — count to 3 in my head before I say anything else. If someone shares a story, just listen, don't jump in too fast. Bridge line: 'that instinct to double-check — that's basically the whole point of today.'">
+      <div class="haze" aria-hidden="true"></div>
+      <div class="kicker mono-tab">Before We Start</div>
+      <p class="quote">Have you ever received a message<br/>that asked you to click, confirm,<br/>or verify — <span class="display-it">right now</span>?</p>
+      <p class="sub-note">Phishing and social engineering aren't rare, isolated incidents — they're one of the most common starting points for real breaches, in every sector, including yours.</p>
+      <div class="poll-zone">
+        <button id="poll-btn">Raise your hand — I've seen this</button>
+        <div id="poll-count">0 responses</div>
+      </div>
+      <div class="attr">A quick, honest show of hands</div>
+      <div class="pagenum">02 / 09</div>
+    </section>
+
+    <!-- 3. PROGRAMME — types of phishing -->
+    <section class="slide s-programme" data-lang="en" data-target="8"
+      data-notes="Keep this one moving, it's mostly definitions. Read the phishing definition once, don't over-explain it. Go through the 4 types quickly, ask fast after each if anyone's seen it. Before switching to Arabic, explain why — social engineering is the bigger umbrella, phishing's just one piece of it.">
+      <div class="left">
+        <div class="kicker">What Is Phishing?</div>
+        <div>
+          <div class="word">Phishing</div>
+          <div class="icon-row" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><polyline points="3,7 12,13 21,7"/></svg>
+          </div>
+        </div>
+        <div class="meta">A social engineering attack where someone impersonates a trusted source to trick you into revealing sensitive information, credentials, or installing malware.</div>
+      </div>
+      <div class="right">
+        <div class="head">Four Common Types</div>
+        <div class="strands">
+          <div class="strand"><div class="num">01</div><div><h3>Email Phishing</h3><p>Mass, generic messages sent to many people at once.</p></div></div>
+          <div class="strand"><div class="num">02</div><div><h3>Spear Phishing</h3><p>Targeted at one person or organization, using real details.</p></div></div>
+          <div class="strand"><div class="num">03</div><div><h3>Smishing</h3><p>Delivered via SMS or text message.</p></div></div>
+          <div class="strand"><div class="num">04</div><div><h3>Vishing</h3><p>Delivered by phone call or voice message.</p></div></div>
+        </div>
+      </div>
+      <div class="pagenum">03 / 09</div>
+    </section>
+
+    <!-- 4. CHAPTER — social engineering (arabic) -->
+    <section class="slide s-chapter" dir="rtl" data-lang="ar" data-target="12"
+      data-notes="Full Arabic here — don't accidentally code-switch back to English. Go through the three examples (pretexting, baiting, tailgating) at a normal pace, same energy as the English parts. Ask if anyone's run into these at work, and actually wait for someone to answer.">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="frame">
+        <div class="head">
+          <div class="h ar">ما هي الهندسة الاجتماعية؟</div>
+          <div class="lab mono-tab">Social Engineering · Chapter Two</div>
+        </div>
+        <p class="lede ar">التصيّد الاحتيالي هو أحد أشكال الهندسة الاجتماعية — وهي مجموعة من الأساليب النفسية التي يستخدمها المهاجمون لخداع الأشخاص للحصول على معلومات حساسة أو الوصول غير المصرح به.</p>
+        <div class="techs">
+          <div class="tech-row ar"><span>انتحال الشخصية (Pretexting)</span><span class="sw" style="background:var(--ember)"></span></div>
+          <div class="tech-row ar"><span>الإغراء (Baiting)</span><span class="sw" style="background:var(--sun)"></span></div>
+          <div class="tech-row ar"><span>التسلل خلف الموظف (Tailgating)</span><span class="sw" style="background:var(--ink)"></span></div>
+        </div>
+        <div class="prompt ar">تفاعل — هل واجهتم أيًا من هذه الأساليب في بيئة عملكم؟</div>
+      </div>
+      <div class="pagenum" style="direction:ltr;">04 / 09</div>
+    </section>
+
+    <!-- 5. RED FLAGS -->
+    <section class="slide s-flags" id="slide5" data-lang="mixed" data-target="17"
+      data-notes="This is the fun one — let them guess the red flags first before I reveal anything. Don't rush to click. When I've heard a few good guesses (or covered the main ones out loud myself), click anywhere on the slide to reveal all four points at once. Recap quickly in Arabic after the reveal, so both language groups walk away with it.">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="frame">
+        <div class="head">
+          <div class="h">Spot the Red Flags<span class="ar">اكتشف علامات الخطر</span></div>
+          <div class="lab mono-tab">Live Exercise · Click To Reveal</div>
+        </div>
+        <div class="body">
+          <div class="email-card">
+            <div class="f danger">From: security-alert@paypa1-verify.com</div>
+            <div class="f danger">Subject: URGENT: Your account will be suspended in 24 hours!</div>
+            <div class="f">Dear Customer,</div>
+            <div class="f">We detected unusual activity. Click below immediately to verify your identity or your account will be permanently locked.</div>
+            <div class="btnbox">[ Verify My Account Now ]</div>
+            <div class="f">Thank you,<br>Account Security Team</div>
+            <div class="fine">(link destination: hxxp://paypa1-secure-login.ru/verify)</div>
+          </div>
+          <div class="flags-panel" id="flags-panel">
+            <div class="flag"><b>Misspelled Domain</b>paypa1, not paypal</div>
+            <div class="flag"><b>Urgency &amp; Threat Language</b>"24 hours", "permanently locked"</div>
+            <div class="flag"><b>Generic Greeting</b>"Dear Customer", not your name</div>
+            <div class="flag"><b>Mismatched Link</b>hover destination ≠ real PayPal domain</div>
+          </div>
+        </div>
+        <div class="hint" id="flag-hint">Click anywhere to reveal</div>
+      </div>
+      <div class="pagenum">05 / 09</div>
+    </section>
+
+    <!-- 6. GCC EXAMPLES (arabic) -->
+    <section class="slide s-ledger" dir="rtl" data-lang="ar" data-target="21"
+      data-notes="Slow down here — this is the part that actually shows I understand their market, not just generic content. Go through the three GCC examples, then ask directly if their org has seen anything similar. This question usually gets people talking, so give it room.">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="frame">
+        <div class="topbar">
+          <div class="h">أمثلة واقعية من منطقة الخليج</div>
+          <div class="lab mono-tab">GCC Context · Regional Examples</div>
+        </div>
+        <div class="rows">
+          <div class="row"><div class="ttl">انتحال جهات حكومية</div><div class="desc">رسائل مزيفة تدّعي أنها من هيئة الزكاة والضريبة أو الجمارك تطلب تحديث بيانات فورًا.</div></div>
+          <div class="row"><div class="ttl">رسائل مصرفية مزيفة</div><div class="desc">روابط تحاكي واجهة البنك تطلب رمز التحقق أو بيانات البطاقة.</div></div>
+          <div class="row"><div class="ttl">عروض وظيفية وهمية</div><div class="desc">استغلال الباحثين عن عمل لجمع بيانات شخصية أو مالية.</div></div>
+        </div>
+        <div class="prompt">تفاعل — هل رأت مؤسستكم محاولات مشابهة؟ كيف تم التعامل معها؟</div>
+      </div>
+      <div class="pagenum" style="direction:ltr;">06 / 09</div>
+    </section>
+
+    <!-- 7. PROTECT YOURSELF -->
+    <section class="slide s-check" data-lang="en" data-target="26"
+      data-notes="Steady pace, five points, don't rush them. Tie each one back to what their company probably already has as policy, not just personal habit. Ask which of these is already standard for them and which isn't — turns it into a conversation instead of a lecture.">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="frame">
+        <div class="head">
+          <div class="h">How To Stay Safe</div>
+          <div class="lab mono-tab">Five Quick Wins</div>
+        </div>
+        <div class="rows">
+          <div class="row"><div class="n">01</div><div class="t">Verify the sender before you act — check the full email address, not just the display name.</div></div>
+          <div class="row"><div class="n">02</div><div class="t">Hover over links to preview the real destination before clicking.</div></div>
+          <div class="row"><div class="n">03</div><div class="t">Slow down — urgency and threats are a deliberate manipulation tactic.</div></div>
+          <div class="row"><div class="n">04</div><div class="t">Enable multi-factor authentication wherever it's available.</div></div>
+          <div class="row"><div class="n">05</div><div class="t">Report suspicious messages to IT/security — don't just delete them.</div></div>
+        </div>
+      </div>
+      <div class="pagenum">07 / 09</div>
+    </section>
+
+    <!-- 8. QUIZ -->
+    <section class="slide s-quiz" data-lang="mixed" data-target="29"
+      data-notes="Fast round, keep the energy up. Scenario 3 is the trick — legit IT resets don't create urgency, remember that's the whole point. Let them shout out answers instead of calling on people.">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="frame">
+        <div class="head">
+          <div class="h">Phishing Or Not?</div>
+          <div class="lab mono-tab">Quick Fire Round</div>
+        </div>
+        <div class="items">
+          <div class="qitem">
+            <div class="qtext">1. Your "bank" texts asking you to confirm your PIN via a link.</div>
+            <div class="qbtns">
+              <button class="qbtn" data-correct="true">Phishing</button>
+              <button class="qbtn" data-correct="false">Not Phishing</button>
+            </div>
+            <div class="qfeedback">Correct answer: Phishing — legitimate banks never ask you to confirm a PIN via link.</div>
+          </div>
+          <div class="qitem">
+            <div class="qtext">2. A colleague calls asking you to urgently transfer funds — from an unfamiliar number.</div>
+            <div class="qbtns">
+              <button class="qbtn" data-correct="true">Phishing</button>
+              <button class="qbtn" data-correct="false">Not Phishing</button>
+            </div>
+            <div class="qfeedback">Correct answer: Phishing — a social engineering / vishing pattern. Verify via a known number first.</div>
+          </div>
+          <div class="qitem">
+            <div class="qtext">3. An email from IT asks you to reset your password through your company's normal portal.</div>
+            <div class="qbtns">
+              <button class="qbtn" data-correct="false">Phishing</button>
+              <button class="qbtn" data-correct="true">Not Phishing</button>
+            </div>
+            <div class="qfeedback">Correct answer: Not Phishing — routine resets through your normal, known portal are expected. No urgency, no external link.</div>
+          </div>
+        </div>
+      </div>
+      <div class="pagenum">08 / 09</div>
+    </section>
+
+    <!-- 9. COLOPHON / CLOSING -->
+    <section class="slide s-colophon" data-lang="mixed" data-target="30"
+      data-notes="Close in both languages, then just open the floor — don't overthink the ending. Thank them for their time and participation.">
+      <div class="blocks" aria-hidden="true"><div class="b1"></div><div class="b2"></div></div>
+      <div class="glow" aria-hidden="true"></div>
+      <div class="titlewrap">
+        <div class="ktag">Thank You · Open Floor</div>
+        <h2 class="ttl">Stay<br/>Skeptical.<span class="ar">شكرًا لكم</span></h2>
+      </div>
+      <div class="colofo">
+        <div><div class="ftag">Presented by</div><div class="ftxt">Norah H. Alrashidi<br/>Cybersecurity Instructor Candidate</div></div>
+        <div><div class="ftag">Background</div><div class="ftxt">M.Sc. Computer Science (Cybersecurity)<br/>6+ years training &amp; curriculum design</div></div>
+        <div><div class="ftag">Currently Pursuing</div><div class="ftxt">CEH Certification</div></div>
+        <div><div class="ftag">Questions</div><div class="ftxt">Open floor now — happy to go deeper on any framework, scenario, or region-specific example.</div></div>
+      </div>
+      <div class="pagenum">09 / 09</div>
+    </section>
+
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud-tl">
+  <span class="hud-chip">SLIDE <span id="hud-num">01</span> / 09</span>
+  <span class="hud-chip" id="hud-lang">EN</span>
+</div>
+<div id="hud-tr">
+  <span id="hud-target" class="hud-chip">TARGET — 1 MIN</span>
+  <span id="hud-timer" class="hud-chip">00:00</span>
+  <button class="hud-btn" id="hud-timer-toggle">Start</button>
+  <button class="hud-btn" id="hud-timer-reset">Reset</button>
+</div>
+<div id="hud-bl">
+  <button class="hud-btn" id="hud-notes-toggle">Notes (N)</button>
+  <button class="hud-btn" id="hud-fullscreen">Fullscreen (F)</button>
+</div>
+<div id="hud-dots"></div>
+
+<div id="hud-notes">
+  <div class="nh"><span>Speaker Notes — Slide <span id="hud-notes-num">1</span></span><span>Press N to close</span></div>
+  <div class="nb" id="hud-notes-body"></div>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+
+  const hudNum = document.getElementById('hud-num');
+  const hudLang = document.getElementById('hud-lang');
+  const hudTarget = document.getElementById('hud-target');
+  const notesBody = document.getElementById('hud-notes-body');
+  const notesNum = document.getElementById('hud-notes-num');
+  const dotsWrap = document.getElementById('hud-dots');
+
+  slides.forEach((s,i)=>{
+    const d = document.createElement('button');
+    d.className = 'hud-dot' + (i===0 ? ' active' : '');
+    d.setAttribute('aria-label', 'Go to slide ' + (i+1));
+    d.addEventListener('click', ()=>show(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function show(i) {
+    if (i < 0) i = 0;
+    if (i > total - 1) i = total - 1;
+    slides[current].classList.remove('active');
+    slides[i].classList.add('active');
+    current = i;
+    updateHUD();
+  }
+
+  function updateHUD(){
+    const section = slides[current];
+    hudNum.textContent = String(current+1).padStart(2,'0');
+    const lang = section.dataset.lang || 'en';
+    hudLang.textContent = lang === 'ar' ? 'AR' : (lang === 'mixed' ? 'EN/AR' : 'EN');
+    hudLang.className = 'hud-chip lang-' + lang;
+    hudTarget.textContent = 'TARGET — ' + (section.dataset.target || '?') + ' MIN';
+    notesBody.textContent = section.dataset.notes || '';
+    notesNum.textContent = current+1;
+    dots.forEach((d,i)=> d.classList.toggle('active', i===current));
+    checkTimerAgainstTarget();
+
+    if (section.id !== 'slide5') {
+      const fp = document.getElementById('flags-panel');
+      const fh = document.getElementById('flag-hint');
+      if (fp) fp.classList.remove('revealed');
+      if (fh) fh.classList.remove('hidden');
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); show(current + 1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(current - 1); }
+    else if (e.key === 'Home') { e.preventDefault(); show(0); }
+    else if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+    else if (e.key.toLowerCase() === 'n') { notesPanel.classList.toggle('open'); }
+    else if (e.key.toLowerCase() === 'f') { document.getElementById('hud-fullscreen').click(); }
+    else if (e.key.toLowerCase() === 'h') {
+      document.getElementById('hud-tl').classList.toggle('show');
+      document.getElementById('hud-tr').classList.toggle('show');
+      document.getElementById('hud-bl').classList.toggle('show');
+    }
+  });
+
+  let tx = null;
+  document.addEventListener('touchstart', (e) => { tx = e.touches[0].clientX; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    if (tx == null) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 40) show(current + (dx < 0 ? 1 : -1));
+    tx = null;
+  });
+
+  // ---------- TIMER ----------
+  let elapsed = 0, timerInterval = null, running = false;
+  const timerEl = document.getElementById('hud-timer');
+  const timerToggle = document.getElementById('hud-timer-toggle');
+  const timerReset = document.getElementById('hud-timer-reset');
+
+  function formatTime(sec){
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = Math.floor(sec%60).toString().padStart(2,'0');
+    return m+':'+s;
+  }
+  function checkTimerAgainstTarget(){
+    const target = parseInt(slides[current].dataset.target, 10) || 0;
+    timerEl.classList.toggle('behind', (elapsed/60) > target);
+  }
+  function tick(){
+    elapsed += 1;
+    timerEl.textContent = formatTime(elapsed);
+    checkTimerAgainstTarget();
+  }
+  timerToggle.addEventListener('click', ()=>{
+    running = !running;
+    timerToggle.textContent = running ? 'Pause' : 'Start';
+    if(running){ timerInterval = setInterval(tick, 1000); }
+    else{ clearInterval(timerInterval); }
+  });
+  timerReset.addEventListener('click', ()=>{
+    elapsed = 0; timerEl.textContent = '00:00';
+    clearInterval(timerInterval); running = false; timerToggle.textContent = 'Start';
+    checkTimerAgainstTarget();
+  });
+
+  // ---------- NOTES PANEL ----------
+  const notesPanel = document.getElementById('hud-notes');
+  document.getElementById('hud-notes-toggle').addEventListener('click', ()=> notesPanel.classList.toggle('open'));
+
+  // ---------- FULLSCREEN ----------
+  document.getElementById('hud-fullscreen').addEventListener('click', ()=>{
+    if(!document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); }
+    else{ document.exitFullscreen(); }
+  });
+
+  // ---------- SLIDE 2: POLL ----------
+  const pollBtn = document.getElementById('poll-btn');
+  const pollCount = document.getElementById('poll-count');
+  let pollN = 0;
+  pollBtn.addEventListener('click', ()=>{
+    pollN++;
+    pollCount.textContent = pollN + (pollN===1 ? ' response' : ' responses');
+  });
+
+  // ---------- SLIDE 5: CLICK ANYWHERE TO REVEAL ----------
+  const slide5 = document.getElementById('slide5');
+  const flagsPanel = document.getElementById('flags-panel');
+  const flagHint = document.getElementById('flag-hint');
+  slide5.addEventListener('click', ()=>{
+    if(!flagsPanel.classList.contains('revealed')){
+      flagsPanel.classList.add('revealed');
+      flagHint.classList.add('hidden');
+    }
+  });
+
+  // ---------- SLIDE 8: QUIZ (each button carries its own correctness) ----------
+  document.querySelectorAll('.qitem').forEach(item=>{
+    const btns = item.querySelectorAll('.qbtn');
+    const feedback = item.querySelector('.qfeedback');
+    btns.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        btns.forEach(b=>{ b.classList.remove('correct','incorrect'); b.disabled = true; });
+        btns.forEach(b=>{ if(b.dataset.correct === 'true'){ b.classList.add('correct'); } });
+        if(btn.dataset.correct === 'false'){ btn.classList.add('incorrect'); }
+        feedback.classList.add('show');
+      });
+    });
+  });
+
+  updateHUD();
+</script>
+
+</body>
+</html>
